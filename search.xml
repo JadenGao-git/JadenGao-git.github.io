@@ -1,226 +1,27 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-  <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
-<meta name="theme-color" content="#222">
-<meta name="generator" content="Hexo 7.3.0">
-  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
-  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
-  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
-  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+<?xml version="1.0" encoding="utf-8"?>
+<search>
+  <entry>
+    <title>Quality-Aware Pre-Trained Models for Blind Image Quality Assessment</title>
+    <url>/2024/11/07/Quality-aware%20Pre-trained%20Models%20for%20Blind%20Image%20Quality%20Assessment/</url>
+    <content><![CDATA[<p><strong>作者</strong>：Kai Zhao†, Kun Yuan†, Ming Sun, Mading Li 和 Xing Wen<br>Kuaishou Technology<br>{zhaokai05, yuankun03, sunming03, limading, wenxing}@kuaishou.com</p>
+<h2 id="摘要"><a href="#摘要" class="headerlink" title="摘要"></a>摘要</h2><p>盲图像质量评估（Blind Image Quality Assessment, BIQA）旨在自动评估单张图像的主观质量。近年来，基于深度学习的方法提升了BIQA的表现。然而，由于标注数据的缺乏，基于深度学习的BIQA方法在某种程度上未能完全发挥其潜力。本文提出一种自监督学习方式，通过定制的预训练任务来解决该问题，从数量级上增加了可用于学习表示的数据量。为了限制学习过程，我们基于一个简单假设设计了质量感知的对比损失：来自失真图像的不同区域的质量应该相似，但在不同失真类型或不同图像之间应有所差异。此外，我们改进了现有的退化过程，构建了约2 × 10⁷大小的退化空间。利用我们的方法在ImageNet数据集上进行预训练后，模型对图像质量更加敏感，在后续的BIQA任务中表现显著提升。实验结果表明，我们的方法在多个BIQA数据集上取得了显著的改进。</p>
+<span id="more"></span>
 
-<link rel="stylesheet" href="/css/main.css">
-
-
-<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
-
-<script id="hexo-configurations">
-    var NexT = window.NexT || {};
-    var CONFIG = {"hostname":"jadengao-git.github.io","root":"/","scheme":"Mist","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
-  </script>
-
-  <meta name="description" content="Quality-aware Pre-trained Models for Blind Image Quality Assessment作者：Kai Zhao†, Kun Yuan†, Ming Sun, Mading Li 和 Xing WenKuaishou Technology{zhaokai05, yuankun03, sunming03, limading, wenxing}@kuaish">
-<meta property="og:type" content="article">
-<meta property="og:title" content="米兰小铁匠的博客">
-<meta property="og:url" content="https://jadengao-git.github.io/2024/11/06/Quality-aware%20Pre-trained%20Models%20for%20Blind%20Image%20Quality%20Assessment/index.html">
-<meta property="og:site_name" content="米兰小铁匠的博客">
-<meta property="og:description" content="Quality-aware Pre-trained Models for Blind Image Quality Assessment作者：Kai Zhao†, Kun Yuan†, Ming Sun, Mading Li 和 Xing WenKuaishou Technology{zhaokai05, yuankun03, sunming03, limading, wenxing}@kuaish">
-<meta property="og:locale" content="zh_CN">
-<meta property="article:published_time" content="2024-11-06T08:09:28.554Z">
-<meta property="article:modified_time" content="2024-11-06T10:03:17.931Z">
-<meta property="article:author" content="米兰小铁匠">
-<meta name="twitter:card" content="summary">
-
-<link rel="canonical" href="https://jadengao-git.github.io/2024/11/06/Quality-aware%20Pre-trained%20Models%20for%20Blind%20Image%20Quality%20Assessment/">
-
-
-<script id="page-configurations">
-  // https://hexo.io/docs/variables.html
-  CONFIG.page = {
-    sidebar: "",
-    isHome : false,
-    isPost : true,
-    lang   : 'zh-CN'
-  };
-</script>
-
-  <title> | 米兰小铁匠的博客</title>
-  
-
-
-
-
-
-
-  <noscript>
-  <style>
-  .use-motion .brand,
-  .use-motion .menu-item,
-  .sidebar-inner,
-  .use-motion .post-block,
-  .use-motion .pagination,
-  .use-motion .comments,
-  .use-motion .post-header,
-  .use-motion .post-body,
-  .use-motion .collection-header { opacity: initial; }
-
-  .use-motion .site-title,
-  .use-motion .site-subtitle {
-    opacity: initial;
-    top: initial;
-  }
-
-  .use-motion .logo-line-before i { left: initial; }
-  .use-motion .logo-line-after i { right: initial; }
-  </style>
-</noscript>
-
-</head>
-
-<body itemscope itemtype="http://schema.org/WebPage">
-  <div class="container use-motion">
-    <div class="headband"></div>
-
-    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
-      <div class="header-inner"><div class="site-brand-container">
-  <div class="site-nav-toggle">
-    <div class="toggle" aria-label="切换导航栏">
-      <span class="toggle-line toggle-line-first"></span>
-      <span class="toggle-line toggle-line-middle"></span>
-      <span class="toggle-line toggle-line-last"></span>
-    </div>
-  </div>
-
-  <div class="site-meta">
-
-    <a href="/" class="brand" rel="start">
-      <span class="logo-line-before"><i></i></span>
-      <h1 class="site-title">米兰小铁匠的博客</h1>
-      <span class="logo-line-after"><i></i></span>
-    </a>
-  </div>
-
-  <div class="site-nav-right">
-    <div class="toggle popup-trigger">
-    </div>
-  </div>
-</div>
-
-
-
-
-<nav class="site-nav">
-  <ul id="menu" class="main-menu menu">
-        <li class="menu-item menu-item-home">
-
-    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
-
-  </li>
-        <li class="menu-item menu-item-about">
-
-    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a>
-
-  </li>
-        <li class="menu-item menu-item-tags">
-
-    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
-
-  </li>
-        <li class="menu-item menu-item-archives">
-
-    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a>
-
-  </li>
-        <li class="menu-item menu-item-schedule">
-
-    <a href="/schedule/" rel="section"><i class="fa fa-calendar fa-fw"></i>日程表</a>
-
-  </li>
-  </ul>
-</nav>
-
-
-
-
-</div>
-    </header>
-
-    
-  <div class="back-to-top">
-    <i class="fa fa-arrow-up"></i>
-    <span>0%</span>
-  </div>
-
-
-    <main class="main">
-      <div class="main-inner">
-        <div class="content-wrap">
-          
-
-          <div class="content post posts-expand">
-            
-
-    
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://jadengao-git.github.io/2024/11/06/Quality-aware%20Pre-trained%20Models%20for%20Blind%20Image%20Quality%20Assessment/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.jpg">
-      <meta itemprop="name" content="米兰小铁匠">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="米兰小铁匠的博客">
-    </span>
-      <header class="post-header">
-        <h1 class="post-title" itemprop="name headline">
-          
-        </h1>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-              
-
-              <time title="创建时间：2024-11-06 16:09:28 / 修改时间：18:03:17" itemprop="dateCreated datePublished" datetime="2024-11-06T16:09:28+08:00">2024-11-06</time>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-        <h1 id="Quality-aware-Pre-trained-Models-for-Blind-Image-Quality-Assessment"><a href="#Quality-aware-Pre-trained-Models-for-Blind-Image-Quality-Assessment" class="headerlink" title="Quality-aware Pre-trained Models for Blind Image Quality Assessment"></a>Quality-aware Pre-trained Models for Blind Image Quality Assessment</h1><p><strong>作者</strong>：Kai Zhao†, Kun Yuan†, Ming Sun, Mading Li 和 Xing Wen<br>Kuaishou Technology<br>{zhaokai05, yuankun03, sunming03, limading, wenxing}@kuaishou.com</p>
-<p>了解更多：</p>
-<p><a target="_blank" rel="noopener" href="https://www.nxrte.com/jishu/16352.html">https://www.nxrte.com/jishu/16352.html</a></p>
-<h2 id="基础名词解释"><a href="#基础名词解释" class="headerlink" title="基础名词解释"></a>基础名词解释</h2><h4 id="1-对比学习"><a href="#1-对比学习" class="headerlink" title="1. 对比学习"></a>1. 对比学习</h4><h5 id="原理"><a href="#原理" class="headerlink" title="原理"></a>原理</h5><p>对比学习是无监督学习的一种，着重于学习同类实例之间的共同特征，区分非同类实例之间的不同之处。</p>
+<h2 id="基础名词解释"><a href="#基础名词解释" class="headerlink" title="基础名词解释"></a>基础名词解释</h2><h3 id="1-对比学习"><a href="#1-对比学习" class="headerlink" title="1. 对比学习"></a>1. 对比学习</h3><h4 id="原理"><a href="#原理" class="headerlink" title="原理"></a>原理</h4><p>对比学习是无监督学习的一种，着重于学习同类实例之间的共同特征，区分非同类实例之间的不同之处。</p>
 <blockquote>
 <p>举个例子，从ImageNet中抽出猫、猫、狗、飞机四张图，那么猫和猫的图片肯定是相似的，和狗不相似。但是和飞机比起来，猫和狗是相似的。所以<strong>对比学习就是对比着差异去学习，模型并不需要真的知道图片中代表的是什么，而只需要知道哪些图片是类似的，哪些图片是不一样的就可以了</strong>。</p>
 </blockquote>
-<h5 id="训练目的"><a href="#训练目的" class="headerlink" title="训练目的"></a>训练目的</h5><p>对比学习，希望相似数据（图片）最终学到的特征是相似的，在特征空间（embedding space）中，特征向量尽量靠近；反之还希望不同的数据学到的特征向量，尽量远离。</p>
-<h5 id="pretext-task（代理任务）"><a href="#pretext-task（代理任务）" class="headerlink" title="pretext task（代理任务）"></a>pretext task（代理任务）</h5><p>对比学习是不需要标签的（比如不需要知道图片是哪一类），但模型还是需要知道哪些图片是类似的，哪些是不相似的，才能训练。这就需要通过通过设计一些巧妙的代理任务，人为指定一些任务来实现。</p>
-<h5 id="应用最广的代理任务：instance-discrimination"><a href="#应用最广的代理任务：instance-discrimination" class="headerlink" title="应用最广的代理任务：instance discrimination"></a>应用最广的代理任务：instance discrimination</h5><ul>
+<h4 id="训练目的"><a href="#训练目的" class="headerlink" title="训练目的"></a>训练目的</h4><p>对比学习，希望相似数据（图片）最终学到的特征是相似的，在特征空间（embedding space）中，特征向量尽量靠近；反之还希望不同的数据学到的特征向量，尽量远离。</p>
+<h4 id="pretext-task（代理任务）"><a href="#pretext-task（代理任务）" class="headerlink" title="pretext task（代理任务）"></a>pretext task（代理任务）</h4><p>对比学习是不需要标签的（比如不需要知道图片是哪一类），但模型还是需要知道哪些图片是类似的，哪些是不相似的，才能训练。这就需要通过通过设计一些巧妙的代理任务，人为指定一些任务来实现。</p>
+<h4 id="应用最广的代理任务：instance-discrimination"><a href="#应用最广的代理任务：instance-discrimination" class="headerlink" title="应用最广的代理任务：instance discrimination"></a>应用最广的代理任务：instance discrimination</h4><ul>
 <li>简单说就是，从一堆图片中调出任意一张图片$x_i$，将其做一次转换（transformation ，比如随机裁剪等数据增广），得到新的图片$x_{i1}$、$x_{i2}$。那么<strong>样本$x_{i1}$叫做基准点（锚点），$x_{i2}$被认为是正样本</strong>（两者都是从$x_{i1}$变化得到的，虽然看起来有差异，但语义信息不应该发生变化），数据集中其它所有图片都是负样本。</li>
 <li>有了正负样本的划分，就可以将数据都输入编码器进行编码提取特征了。因为所有的正负样本都是基于锚点来说的，所以$x_{i1}$会单独使用一个编码器$E_{11}$，$x_{i2}$和其它所有负样本使用另外的编码器（可以是同一个编码器，也可以也可以使用不同的编码器。但是不同的编码器之间必须相似，这样编码的特征才有一致性，才有比较的意义）。</li>
 <li>对比学习就是要让正样本的编码特征和锚点的编码特征尽可能靠近（相似），让负样本的特征和锚点特征尽量远离。</li>
 <li>instance discrimination直译过来就是个体判别，在这个任务中，只有经过这张图片转换的样本才是正样本，其它图片都是负样本，所以每张图都自成一类。对于ImageNet来说，就不是1000类，而是128万个类别。</li>
 </ul>
-<h5 id="目标函数"><a href="#目标函数" class="headerlink" title="目标函数"></a>目标函数</h5><p>确定了代理任务，知道如何定义正负样本之后，就需要用一个目标函数，来告诉模型该如何学习，比如常见的对比学习目标函数NCE loss等。</p>
-<h5 id="特性"><a href="#特性" class="headerlink" title="特性"></a>特性</h5><p>对比学习最大的特性，是这种方法非常的灵活，可以设置各种不同的代理任务。只要找到一种方式去定义正负样本，剩下的都是一些比较标准化的流程。</p>
-<h4 id="2-预训练"><a href="#2-预训练" class="headerlink" title="2. 预训练"></a>2. 预训练</h4><p>在深度学习领域，预训练（Pre-training）通常是指对模型进行<a target="_blank" rel="noopener" href="https://so.csdn.net/so/search?q=%E6%97%A0%E7%9B%91%E7%9D%A3&spm=1001.2101.3001.7020">无监督</a>或自监督学习的过程，在大规模未标注数据上先训练模型，以便为后续任务提供一个高质量的初始权重。</p>
+<h4 id="目标函数"><a href="#目标函数" class="headerlink" title="目标函数"></a>目标函数</h4><p>确定了代理任务，知道如何定义正负样本之后，就需要用一个目标函数，来告诉模型该如何学习，比如常见的对比学习目标函数NCE loss等。</p>
+<h4 id="特性"><a href="#特性" class="headerlink" title="特性"></a>特性</h4><p>对比学习最大的特性，是这种方法非常的灵活，可以设置各种不同的代理任务。只要找到一种方式去定义正负样本，剩下的都是一些比较标准化的流程。</p>
+<h3 id="2-预训练"><a href="#2-预训练" class="headerlink" title="2. 预训练"></a>2. 预训练</h3><p>在深度学习领域，预训练（Pre-training）通常是指对模型进行<a href="https://so.csdn.net/so/search?q=%E6%97%A0%E7%9B%91%E7%9D%A3&spm=1001.2101.3001.7020">无监督</a>或自监督学习的过程，在大规模未标注数据上先训练模型，以便为后续任务提供一个高质量的初始权重。</p>
 <p>预训练模型首先在诸如自然语言理解或者生成的任务上通过解决诸如掩码语言模型（Masked Language Modeling, MLM）、下一个词预测（Next Sentence Prediction, NSP）或其他自定义设计的任务来学习通用的语言表示。然后，针对特定下游任务，可以采用微调（Fine-tuning）的方式，即在预训练模型的基础上进一步训练以适应具体场景，如文本分类、情感分析、问答系统等。</p>
 <p>这样做的优势在于：</p>
 <ol>
@@ -228,7 +29,7 @@
 <li>避免从随机初始化开始训练需要大量标记数据的问题。</li>
 <li>能够快速迁移学习到新的、相关但数据有限的任务中去。</li>
 </ol>
-<h4 id="3-图像质量检测中的正样本与负样本"><a href="#3-图像质量检测中的正样本与负样本" class="headerlink" title="3. 图像质量检测中的正样本与负样本"></a>3. 图像质量检测中的正样本与负样本</h4><p>在图像质量检测（尤其是盲图像质量评估，BIQA）任务中，<strong>正样本</strong>和<strong>负样本</strong>通常是根据图像的质量差异来定义的。具体来说：</p>
+<h3 id="3-图像质量检测中的正样本与负样本"><a href="#3-图像质量检测中的正样本与负样本" class="headerlink" title="3. 图像质量检测中的正样本与负样本"></a>3. 图像质量检测中的正样本与负样本</h3><p>在图像质量检测（尤其是盲图像质量评估，BIQA）任务中，<strong>正样本</strong>和<strong>负样本</strong>通常是根据图像的质量差异来定义的。具体来说：</p>
 <ol>
 <li><strong>正样本</strong>：指质量相似的图像对，或是相同图像的不同区域的对比，且这些区域的质量一致。例如，同一张图像中两个局部区域的质量可能相同，或是两个经过相同失真处理的图像片段。正样本的设计目的是让模型学习到相同或相似质量图像的特征相似性。</li>
 <li><strong>负样本</strong>：指质量差异较大的图像对。这些可以是同一图像的不同区域但受不同失真类型或程度影响的图像片段，也可以是来自不同图像的片段。负样本的作用是帮助模型区分出质量不同的图像特征，使模型能够学会判断并“推开”质量差异较大的图像。</li>
@@ -245,7 +46,6 @@
 <li><strong>负样本对</strong>：模型被训练将这些不同质量的图像推远，使得模型在特征空间中更清楚地分离出高质量和低质量图像特征。</li>
 </ul>
 <p>这种正负样本对比的设计帮助模型捕捉图像质量的细微差别，从而更准确地评估图像的整体质量。</p>
-<h2 id="摘要"><a href="#摘要" class="headerlink" title="摘要"></a>摘要</h2><p>盲图像质量评估（Blind Image Quality Assessment, BIQA）旨在自动评估单张图像的主观质量。近年来，基于深度学习的方法提升了BIQA的表现。然而，由于标注数据的缺乏，基于深度学习的BIQA方法在某种程度上未能完全发挥其潜力。本文提出一种自监督学习方式，通过定制的预训练任务来解决该问题，从数量级上增加了可用于学习表示的数据量。为了限制学习过程，我们基于一个简单假设设计了质量感知的对比损失：来自失真图像的不同区域的质量应该相似，但在不同失真类型或不同图像之间应有所差异。此外，我们改进了现有的退化过程，构建了约2 × 10⁷大小的退化空间。利用我们的方法在ImageNet数据集上进行预训练后，模型对图像质量更加敏感，在后续的BIQA任务中表现显著提升。实验结果表明，我们的方法在多个BIQA数据集上取得了显著的改进。</p>
 <h2 id="1-引言"><a href="#1-引言" class="headerlink" title="1. 引言"></a>1. 引言</h2><p>在移动互联网时代，每天有数十亿张图像被生成、上传并在Twitter、TikTok等社交媒体平台上共享。图像质量作为一个重要指标，帮助服务提供商筛选和传递高质量图像，从而提高用户体验质量（Quality of Experience）。因此，已有大量研究致力于建立一种与人类观感一致的图像质量评估（IQA）方法。在现实场景中，通常无法获取参考图像，或参考图像的质量本身也可能存在问题。因此，相较于全参考（Full-Reference）IQA已取得预期成果，盲IQA（BIQA）方法因其实用性和适用性更具吸引力。</p>
 <p>最近，基于深度学习的BIQA方法在IQA领域的表现取得了巨大进展。然而，由于&#x3D;&#x3D;标注数据的缺乏&#x3D;&#x3D;，问题依然未得到彻底解决。现有最大的BIQA数据集FLIVE包含近40,000张真实世界的失真图像，而著名的CIFAR-100数据集则包含60,000张标注图像。现有的BIQA数据集数量过少，无法有效训练深度学习模型。</p>
 <p>研究人员提出了一些方法来应对这一挑战。一个直接的方法是对局部图像区域进行采样，并为这些区域赋予整个图像的均值意见评分（MOS）。然而，局部图像区域的感知评分往往不同于整体图像的评分。另一种常见策略是利用大规模数据集（例如ImageNet）的领域知识。然而，这些预训练模型在BIQA任务中的效果可能不尽如人意，因为相同内容的图像具有相同的语义标签，但其质量可能不同。一些研究人员提出在合成图像上训练模型，然后将其应用于小规模目标BIQA数据集。然而，由简单退化过程生成的图像难以模拟真实的失真效果。</p>
@@ -301,184 +101,11 @@
 <h3 id="4-4-消融研究"><a href="#4-4-消融研究" class="headerlink" title="4.4 消融研究"></a>4.4 消融研究</h3><p>通过消融实验，我们研究了数据量、编码器容量和负样本组成对QPT模型性能的影响。结果表明，数据量和编码器容量的增加均有助于提升下游任务的表现，且不同负样本组合对模型性能有显著影响。</p>
 <h3 id="4-5-与其他预训练任务的比较"><a href="#4-5-与其他预训练任务的比较" class="headerlink" title="4.5 与其他预训练任务的比较"></a>4.5 与其他预训练任务的比较</h3><p>我们进一步将QPT与其他预训练任务（包括从头训练、监督学习和MoCo）进行对比。结果显示，QPT在BIQA场景中比其他任务表现更优，特别是在线性探测和端到端微调实验中均取得了最高的表现。</p>
 <h2 id="5-结论"><a href="#5-结论" class="headerlink" title="5. 结论"></a>5. 结论</h2><p>本文提出了用于下游BIQA任务的QPT模型，通过引入多种退化类型和组合，构建了包含2 × 10⁷种可能退化的退化空间，以模拟更复杂且真实的失真图像。通过质量感知对比损失，模型可以学习质量相关的信息。实验结果表明，QPT在多个BIQA基准数据集上取得显著改进，并且可以轻松集成到现有最优方法中，表现出良好的泛化能力。</p>
-
-    </div>
-
-    
-    
-    
-
-      <footer class="post-footer">
-
-        
-
-
-        
-      </footer>
-    
-  </article>
-  
-  
-  
-
-
-
-          </div>
-          
-
-<script>
-  window.addEventListener('tabs:register', () => {
-    let { activeClass } = CONFIG.comments;
-    if (CONFIG.comments.storage) {
-      activeClass = localStorage.getItem('comments_active') || activeClass;
-    }
-    if (activeClass) {
-      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
-      if (activeTab) {
-        activeTab.click();
-      }
-    }
-  });
-  if (CONFIG.comments.storage) {
-    window.addEventListener('tabs:click', event => {
-      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
-      let commentClass = event.target.classList[1];
-      localStorage.setItem('comments_active', commentClass);
-    });
-  }
-</script>
-
-        </div>
-          
-  
-  <div class="toggle sidebar-toggle">
-    <span class="toggle-line toggle-line-first"></span>
-    <span class="toggle-line toggle-line-middle"></span>
-    <span class="toggle-line toggle-line-last"></span>
-  </div>
-
-  <aside class="sidebar">
-    <div class="sidebar-inner">
-
-      <ul class="sidebar-nav motion-element">
-        <li class="sidebar-nav-toc">
-          文章目录
-        </li>
-        <li class="sidebar-nav-overview">
-          站点概览
-        </li>
-      </ul>
-
-      <!--noindex-->
-      <div class="post-toc-wrap sidebar-panel">
-          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#Quality-aware-Pre-trained-Models-for-Blind-Image-Quality-Assessment"><span class="nav-number">1.</span> <span class="nav-text">Quality-aware Pre-trained Models for Blind Image Quality Assessment</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9F%BA%E7%A1%80%E5%90%8D%E8%AF%8D%E8%A7%A3%E9%87%8A"><span class="nav-number">1.1.</span> <span class="nav-text">基础名词解释</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#1-%E5%AF%B9%E6%AF%94%E5%AD%A6%E4%B9%A0"><span class="nav-number">1.1.0.1.</span> <span class="nav-text">1. 对比学习</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#%E5%8E%9F%E7%90%86"><span class="nav-number">1.1.0.1.1.</span> <span class="nav-text">原理</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#%E8%AE%AD%E7%BB%83%E7%9B%AE%E7%9A%84"><span class="nav-number">1.1.0.1.2.</span> <span class="nav-text">训练目的</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#pretext-task%EF%BC%88%E4%BB%A3%E7%90%86%E4%BB%BB%E5%8A%A1%EF%BC%89"><span class="nav-number">1.1.0.1.3.</span> <span class="nav-text">pretext task（代理任务）</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#%E5%BA%94%E7%94%A8%E6%9C%80%E5%B9%BF%E7%9A%84%E4%BB%A3%E7%90%86%E4%BB%BB%E5%8A%A1%EF%BC%9Ainstance-discrimination"><span class="nav-number">1.1.0.1.4.</span> <span class="nav-text">应用最广的代理任务：instance discrimination</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#%E7%9B%AE%E6%A0%87%E5%87%BD%E6%95%B0"><span class="nav-number">1.1.0.1.5.</span> <span class="nav-text">目标函数</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#%E7%89%B9%E6%80%A7"><span class="nav-number">1.1.0.1.6.</span> <span class="nav-text">特性</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#2-%E9%A2%84%E8%AE%AD%E7%BB%83"><span class="nav-number">1.1.0.2.</span> <span class="nav-text">2. 预训练</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#3-%E5%9B%BE%E5%83%8F%E8%B4%A8%E9%87%8F%E6%A3%80%E6%B5%8B%E4%B8%AD%E7%9A%84%E6%AD%A3%E6%A0%B7%E6%9C%AC%E4%B8%8E%E8%B4%9F%E6%A0%B7%E6%9C%AC"><span class="nav-number">1.1.0.3.</span> <span class="nav-text">3. 图像质量检测中的正样本与负样本</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%91%98%E8%A6%81"><span class="nav-number">1.2.</span> <span class="nav-text">摘要</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#1-%E5%BC%95%E8%A8%80"><span class="nav-number">1.3.</span> <span class="nav-text">1. 引言</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-%E7%9B%B8%E5%85%B3%E5%B7%A5%E4%BD%9C"><span class="nav-number">1.4.</span> <span class="nav-text">2. 相关工作</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#2-1-%E7%9B%B2%E5%9B%BE%E5%83%8F%E8%B4%A8%E9%87%8F%E8%AF%84%E4%BC%B0"><span class="nav-number">1.4.1.</span> <span class="nav-text">2.1 盲图像质量评估</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-2-%E8%87%AA%E7%9B%91%E7%9D%A3%E5%AD%A6%E4%B9%A0"><span class="nav-number">1.4.2.</span> <span class="nav-text">2.2 自监督学习</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-3-%E5%9B%BE%E5%83%8F%E9%80%80%E5%8C%96%E5%BB%BA%E6%A8%A1"><span class="nav-number">1.4.3.</span> <span class="nav-text">2.3 图像退化建模</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3-%E6%96%B9%E6%B3%95"><span class="nav-number">1.5.</span> <span class="nav-text">3. 方法</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#3-1-%E8%87%AA%E7%9B%91%E7%9D%A3%E5%AD%A6%E4%B9%A0%E6%A1%86%E6%9E%B6%E5%9B%9E%E9%A1%BE"><span class="nav-number">1.5.1.</span> <span class="nav-text">3.1 自监督学习框架回顾</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-2-%E9%80%80%E5%8C%96%E7%A9%BA%E9%97%B4"><span class="nav-number">1.5.2.</span> <span class="nav-text">3.2 退化空间</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-3-%E8%B4%A8%E9%87%8F%E6%84%9F%E7%9F%A5%E9%A2%84%E8%AE%AD%E7%BB%83%E4%BB%BB%E5%8A%A1"><span class="nav-number">1.5.3.</span> <span class="nav-text">3.3 质量感知预训练任务</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#4-%E5%AE%9E%E9%AA%8C"><span class="nav-number">1.6.</span> <span class="nav-text">4. 实验</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#4-1-%E6%95%B0%E6%8D%AE%E9%9B%86%E5%92%8C%E8%AF%84%E4%BB%B7%E6%A0%87%E5%87%86"><span class="nav-number">1.6.1.</span> <span class="nav-text">4.1 数据集和评价标准</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-2-%E5%AE%9E%E7%8E%B0%E7%BB%86%E8%8A%82"><span class="nav-number">1.6.2.</span> <span class="nav-text">4.2 实现细节</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-3-%E4%B8%8E%E7%8E%B0%E6%9C%89%E6%9C%80%E4%BC%98%E6%96%B9%E6%B3%95%E7%9A%84%E6%AF%94%E8%BE%83"><span class="nav-number">1.6.3.</span> <span class="nav-text">4.3 与现有最优方法的比较</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-4-%E6%B6%88%E8%9E%8D%E7%A0%94%E7%A9%B6"><span class="nav-number">1.6.4.</span> <span class="nav-text">4.4 消融研究</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-5-%E4%B8%8E%E5%85%B6%E4%BB%96%E9%A2%84%E8%AE%AD%E7%BB%83%E4%BB%BB%E5%8A%A1%E7%9A%84%E6%AF%94%E8%BE%83"><span class="nav-number">1.6.5.</span> <span class="nav-text">4.5 与其他预训练任务的比较</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#5-%E7%BB%93%E8%AE%BA"><span class="nav-number">1.7.</span> <span class="nav-text">5. 结论</span></a></li></ol></li></ol></div>
-      </div>
-      <!--/noindex-->
-
-      <div class="site-overview-wrap sidebar-panel">
-        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
-    <img class="site-author-image" itemprop="image" alt="米兰小铁匠"
-      src="/images/avatar.jpg">
-  <p class="site-author-name" itemprop="name">米兰小铁匠</p>
-  <div class="site-description" itemprop="description"></div>
-</div>
-<div class="site-state-wrap motion-element">
-  <nav class="site-state">
-      <div class="site-state-item site-state-posts">
-          <a href="/archives/">
-        
-          <span class="site-state-item-count">1</span>
-          <span class="site-state-item-name">日志</span>
-        </a>
-      </div>
-  </nav>
-</div>
-  <div class="links-of-author motion-element">
-      <span class="links-of-author-item">
-        <a href="https://github.com/JadenGao-git" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;JadenGao-git" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
-      </span>
-  </div>
-
-
-
-      </div>
-
-    </div>
-  </aside>
-  <div id="sidebar-dimmer"></div>
-
-
-      </div>
-    </main>
-
-    <footer class="footer">
-      <div class="footer-inner">
-        
-
-        
-
-<div class="copyright">
-  
-  &copy; 
-  <span itemprop="copyrightYear">2024</span>
-  <span class="with-love">
-    <i class="fa fa-heart"></i>
-  </span>
-  <span class="author" itemprop="copyrightHolder">米兰小铁匠</span>
-</div>
-  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://mist.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Mist</a> 强力驱动
-  </div>
-
-        
-
-
-
-
-
-
-
-
-      </div>
-    </footer>
-  </div>
-
-  
-  <script src="/lib/anime.min.js"></script>
-  <script src="/lib/velocity/velocity.min.js"></script>
-  <script src="/lib/velocity/velocity.ui.min.js"></script>
-
-<script src="/js/utils.js"></script>
-
-<script src="/js/motion.js"></script>
-
-
-<script src="/js/schemes/muse.js"></script>
-
-
-<script src="/js/next-boot.js"></script>
-
-
-
-
-  
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  
-
-  
-
-</body>
-</html>
+<p>了解更多：<br><a href="https://www.nxrte.com/jishu/16352.html">https://www.nxrte.com/jishu/16352.html</a></p>
+]]></content>
+      <tags>
+        <tag>图像质量评价</tag>
+        <tag>QPT</tag>
+      </tags>
+  </entry>
+</search>
