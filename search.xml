@@ -111,13 +111,11 @@
   <entry>
     <title>基于深度学习的图像处理基本知识</title>
     <url>/2024/11/08/%E5%9F%BA%E4%BA%8E%E6%B7%B1%E5%BA%A6%E5%AD%A6%E4%B9%A0%E7%9A%84%E5%9B%BE%E5%83%8F%E5%A4%84%E7%90%86%E5%9F%BA%E6%9C%AC%E7%9F%A5%E8%AF%86/</url>
-    <content><![CDATA[<h1 id="一、须知"><a href="#一、须知" class="headerlink" title="一、须知"></a>一、须知</h1><p>参考：</p>
+    <content><![CDATA[<p>参考：</p>
 <p><strong>《【深度学习】一文搞懂卷积神经网络（CNN）的原理（超详细）》</strong>：<a href="https://blog.csdn.net/AI_dataloads/article/details/133250229">https://blog.csdn.net/AI_dataloads/article/details/133250229</a></p>
 <span id="more"></span>
 
-
-
-<h2 id="1-深度卷积神经网络"><a href="#1-深度卷积神经网络" class="headerlink" title="1. 深度卷积神经网络"></a>1. 深度卷积神经网络</h2><p>深度卷积神经网络（Deep Convolutional Neural Networks，DCNN）是一种深度学习模型，特别适用于图像处理和计算机视觉任务。它是卷积神经网络（Convolutional Neural Networks，CNN）的一个扩展，包含多层卷积和其他操作。</p>
+<h1 id="一、须知"><a href="#一、须知" class="headerlink" title="一、须知"></a>一、须知</h1><h2 id="1-深度卷积神经网络"><a href="#1-深度卷积神经网络" class="headerlink" title="1. 深度卷积神经网络"></a>1. 深度卷积神经网络</h2><p>深度卷积神经网络（Deep Convolutional Neural Networks，DCNN）是一种深度学习模型，特别适用于图像处理和计算机视觉任务。它是卷积神经网络（Convolutional Neural Networks，CNN）的一个扩展，包含多层卷积和其他操作。</p>
 <h3 id="（1）什么是卷积"><a href="#（1）什么是卷积" class="headerlink" title="（1）什么是卷积"></a>（1）什么是卷积</h3><p>在卷积神经网络中，卷积操作是指将一个可移动的小窗口（称为数据窗口）与图像进行逐元素相乘然后相加的操作。这个小窗口其实是一组固定的权重，它可以被看作是一个特定的滤波器（filter）或卷积核。这个操作的名称“卷积”，源自于这种元素级相乘和求和的过程。这一操作是卷积神经网络名字的来源。</p>
 <blockquote>
 <p><strong>卷积核</strong>：数据窗口中的权重集合称为卷积核（或滤波器），它是网络在训练过程中学习得到的。不同的卷积核可以提取不同类型的特征，比如边缘、纹理等。</p>
