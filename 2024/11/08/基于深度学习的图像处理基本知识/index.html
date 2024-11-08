@@ -1,118 +1,250 @@
-<?xml version="1.0" encoding="utf-8"?>
-<search>
-  <entry>
-    <title>Quality-Aware Pre-Trained Models for Blind Image Quality Assessment</title>
-    <url>/2024/11/07/Quality-aware%20Pre-trained%20Models%20for%20Blind%20Image%20Quality%20Assessment/</url>
-    <content><![CDATA[<p><strong>作者</strong>：Kai Zhao†, Kun Yuan†, Ming Sun, Mading Li 和 Xing Wen<br>Kuaishou Technology<br>{zhaokai05, yuankun03, sunming03, limading, wenxing}@kuaishou.com</p>
-<h2 id="摘要"><a href="#摘要" class="headerlink" title="摘要"></a>摘要</h2><p>盲图像质量评估（Blind Image Quality Assessment, BIQA）旨在自动评估单张图像的主观质量。近年来，基于深度学习的方法提升了BIQA的表现。然而，由于标注数据的缺乏，基于深度学习的BIQA方法在某种程度上未能完全发挥其潜力。本文提出一种自监督学习方式，通过定制的预训练任务来解决该问题，从数量级上增加了可用于学习表示的数据量。为了限制学习过程，我们基于一个简单假设设计了质量感知的对比损失：来自失真图像的不同区域的质量应该相似，但在不同失真类型或不同图像之间应有所差异。此外，我们改进了现有的退化过程，构建了约2 × 10⁷大小的退化空间。利用我们的方法在ImageNet数据集上进行预训练后，模型对图像质量更加敏感，在后续的BIQA任务中表现显著提升。实验结果表明，我们的方法在多个BIQA数据集上取得了显著的改进。</p>
-<span id="more"></span>
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 7.3.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
 
-<h2 id="基础名词解释"><a href="#基础名词解释" class="headerlink" title="基础名词解释"></a>基础名词解释</h2><h3 id="1-对比学习"><a href="#1-对比学习" class="headerlink" title="1. 对比学习"></a>1. 对比学习</h3><h4 id="原理"><a href="#原理" class="headerlink" title="原理"></a>原理</h4><p>对比学习是无监督学习的一种，着重于学习同类实例之间的共同特征，区分非同类实例之间的不同之处。</p>
-<blockquote>
-<p>举个例子，从ImageNet中抽出猫、猫、狗、飞机四张图，那么猫和猫的图片肯定是相似的，和狗不相似。但是和飞机比起来，猫和狗是相似的。所以<strong>对比学习就是对比着差异去学习，模型并不需要真的知道图片中代表的是什么，而只需要知道哪些图片是类似的，哪些图片是不一样的就可以了</strong>。</p>
-</blockquote>
-<h4 id="训练目的"><a href="#训练目的" class="headerlink" title="训练目的"></a>训练目的</h4><p>对比学习，希望相似数据（图片）最终学到的特征是相似的，在特征空间（embedding space）中，特征向量尽量靠近；反之还希望不同的数据学到的特征向量，尽量远离。</p>
-<h4 id="pretext-task（代理任务）"><a href="#pretext-task（代理任务）" class="headerlink" title="pretext task（代理任务）"></a>pretext task（代理任务）</h4><p>对比学习是不需要标签的（比如不需要知道图片是哪一类），但模型还是需要知道哪些图片是类似的，哪些是不相似的，才能训练。这就需要通过通过设计一些巧妙的代理任务，人为指定一些任务来实现。</p>
-<h4 id="应用最广的代理任务：instance-discrimination"><a href="#应用最广的代理任务：instance-discrimination" class="headerlink" title="应用最广的代理任务：instance discrimination"></a>应用最广的代理任务：instance discrimination</h4><ul>
-<li>简单说就是，从一堆图片中调出任意一张图片$x_i$，将其做一次转换（transformation ，比如随机裁剪等数据增广），得到新的图片$x_{i1}$、$x_{i2}$。那么<strong>样本$x_{i1}$叫做基准点（锚点），$x_{i2}$被认为是正样本</strong>（两者都是从$x_{i1}$变化得到的，虽然看起来有差异，但语义信息不应该发生变化），数据集中其它所有图片都是负样本。</li>
-<li>有了正负样本的划分，就可以将数据都输入编码器进行编码提取特征了。因为所有的正负样本都是基于锚点来说的，所以$x_{i1}$会单独使用一个编码器$E_{11}$，$x_{i2}$和其它所有负样本使用另外的编码器（可以是同一个编码器，也可以也可以使用不同的编码器。但是不同的编码器之间必须相似，这样编码的特征才有一致性，才有比较的意义）。</li>
-<li>对比学习就是要让正样本的编码特征和锚点的编码特征尽可能靠近（相似），让负样本的特征和锚点特征尽量远离。</li>
-<li>instance discrimination直译过来就是个体判别，在这个任务中，只有经过这张图片转换的样本才是正样本，其它图片都是负样本，所以每张图都自成一类。对于ImageNet来说，就不是1000类，而是128万个类别。</li>
-</ul>
-<h4 id="目标函数"><a href="#目标函数" class="headerlink" title="目标函数"></a>目标函数</h4><p>确定了代理任务，知道如何定义正负样本之后，就需要用一个目标函数，来告诉模型该如何学习，比如常见的对比学习目标函数NCE loss等。</p>
-<h4 id="特性"><a href="#特性" class="headerlink" title="特性"></a>特性</h4><p>对比学习最大的特性，是这种方法非常的灵活，可以设置各种不同的代理任务。只要找到一种方式去定义正负样本，剩下的都是一些比较标准化的流程。</p>
-<h3 id="2-预训练"><a href="#2-预训练" class="headerlink" title="2. 预训练"></a>2. 预训练</h3><p>在深度学习领域，预训练（Pre-training）通常是指对模型进行<a href="https://so.csdn.net/so/search?q=%E6%97%A0%E7%9B%91%E7%9D%A3&spm=1001.2101.3001.7020">无监督</a>或自监督学习的过程，在大规模未标注数据上先训练模型，以便为后续任务提供一个高质量的初始权重。</p>
-<p>预训练模型首先在诸如自然语言理解或者生成的任务上通过解决诸如掩码语言模型（Masked Language Modeling, MLM）、下一个词预测（Next Sentence Prediction, NSP）或其他自定义设计的任务来学习通用的语言表示。然后，针对特定下游任务，可以采用微调（Fine-tuning）的方式，即在预训练模型的基础上进一步训练以适应具体场景，如文本分类、情感分析、问答系统等。</p>
-<p>这样做的优势在于：</p>
-<ol>
-<li>利用大量未标记数据中蕴含的潜在信息和模式。</li>
-<li>避免从随机初始化开始训练需要大量标记数据的问题。</li>
-<li>能够快速迁移学习到新的、相关但数据有限的任务中去。</li>
-</ol>
-<h3 id="3-图像质量检测中的正样本与负样本"><a href="#3-图像质量检测中的正样本与负样本" class="headerlink" title="3. 图像质量检测中的正样本与负样本"></a>3. 图像质量检测中的正样本与负样本</h3><p>在图像质量检测（尤其是盲图像质量评估，BIQA）任务中，<strong>正样本</strong>和<strong>负样本</strong>通常是根据图像的质量差异来定义的。具体来说：</p>
-<ol>
-<li><strong>正样本</strong>：指质量相似的图像对，或是相同图像的不同区域的对比，且这些区域的质量一致。例如，同一张图像中两个局部区域的质量可能相同，或是两个经过相同失真处理的图像片段。正样本的设计目的是让模型学习到相同或相似质量图像的特征相似性。</li>
-<li><strong>负样本</strong>：指质量差异较大的图像对。这些可以是同一图像的不同区域但受不同失真类型或程度影响的图像片段，也可以是来自不同图像的片段。负样本的作用是帮助模型区分出质量不同的图像特征，使模型能够学会判断并“推开”质量差异较大的图像。</li>
-</ol>
-<p>在盲图像质量评估任务中，正负样本的定义通常基于以下几种情况：</p>
-<ul>
-<li><strong>同一图像不同区域</strong>：如果这些区域的质量相似，则为正样本对；如果这些区域质量差异较大（例如一个区域清晰，另一个区域模糊），则构成负样本对。</li>
-<li><strong>不同失真处理</strong>：对于同一张图像，如果两个片段经过了相同或相似的失真处理，则为正样本对；而如果失真类型或程度不同，则为负样本对。</li>
-<li><strong>不同图像</strong>：通常情况下，不同图像的内容和质量都有所差异，所以会被视为负样本对。不过在一些特殊情况中，例如图像内容不同但失真处理相同，这样的图像对也可能被用作正样本对，取决于模型的设计。</li>
-</ul>
-<p><strong>正负样本在模型中的作用</strong></p>
-<ul>
-<li><strong>正样本对</strong>：模型被鼓励在特征空间中将这些相似质量的样本拉近，学习到类似质量的图像特征。</li>
-<li><strong>负样本对</strong>：模型被训练将这些不同质量的图像推远，使得模型在特征空间中更清楚地分离出高质量和低质量图像特征。</li>
-</ul>
-<p>这种正负样本对比的设计帮助模型捕捉图像质量的细微差别，从而更准确地评估图像的整体质量。</p>
-<h2 id="1-引言"><a href="#1-引言" class="headerlink" title="1. 引言"></a>1. 引言</h2><p>在移动互联网时代，每天有数十亿张图像被生成、上传并在Twitter、TikTok等社交媒体平台上共享。图像质量作为一个重要指标，帮助服务提供商筛选和传递高质量图像，从而提高用户体验质量（Quality of Experience）。因此，已有大量研究致力于建立一种与人类观感一致的图像质量评估（IQA）方法。在现实场景中，通常无法获取参考图像，或参考图像的质量本身也可能存在问题。因此，相较于全参考（Full-Reference）IQA已取得预期成果，盲IQA（BIQA）方法因其实用性和适用性更具吸引力。</p>
-<p>最近，基于深度学习的BIQA方法在IQA领域的表现取得了巨大进展。然而，由于&#x3D;&#x3D;标注数据的缺乏&#x3D;&#x3D;，问题依然未得到彻底解决。现有最大的BIQA数据集FLIVE包含近40,000张真实世界的失真图像，而著名的CIFAR-100数据集则包含60,000张标注图像。现有的BIQA数据集数量过少，无法有效训练深度学习模型。</p>
-<p>研究人员提出了一些方法来应对这一挑战。一个直接的方法是对局部图像区域进行采样，并为这些区域赋予整个图像的均值意见评分（MOS）。然而，局部图像区域的感知评分往往不同于整体图像的评分。另一种常见策略是利用大规模数据集（例如ImageNet）的领域知识。然而，这些预训练模型在BIQA任务中的效果可能不尽如人意，因为相同内容的图像具有相同的语义标签，但其质量可能不同。一些研究人员提出在合成图像上训练模型，然后将其应用于小规模目标BIQA数据集。然而，由简单退化过程生成的图像难以模拟真实的失真效果。</p>
-<p>自监督学习（SSL）或无监督学习可以解决标注数据不足的问题，因为它可以利用大量未标记的数据。与其他视觉任务主要关注高层次信息的模型不同，<u>BIQA任务需要学习对各类低层次失真、高层次内容及其之间交互的敏感表示</u>。本文提出一种新颖的SSL机制，<u>通过区分不同感知质量的样本来生成用于后续BIQA任务的质量感知预训练（QPT）模型。</u>具体来说，我们假设来自同一失真图像的区域应具有相似的质量，但与其他图像的不同区域质量应不同。此外，我们引入了图像恢复领域的最新进展，如打乱顺序、高阶退化和跳过操作，以模拟真实的失真效果。通过在ImageNet数据集上进行预训练，我们期望模型能够提取质量感知特征，从而提升BIQA任务的表现。 </p>
-<blockquote>
-<p>BIQA模型必须对<strong>低层次的失真细节</strong>（如像素级的噪声或模糊）和<strong>高层次的语义内容</strong>（如整个场景或物体）都敏感，并且能够理解这些不同层次信息之间的交互关系。</p>
-<p>自监督学习（SSL）机制不依赖人工标注，而是通过设计一种自动区分不同图像质量的任务来训练模型，使其能够更敏感地识别图像的质量差异。本文的方法称为“质量感知预训练（QPT）模型”，这是为了使模型在后续的BIQA任务中更好地评估图像质量。</p>
-</blockquote>
-<h2 id="2-相关工作"><a href="#2-相关工作" class="headerlink" title="2. 相关工作"></a>2. 相关工作</h2><h3 id="2-1-盲图像质量评估"><a href="#2-1-盲图像质量评估" class="headerlink" title="2.1 盲图像质量评估"></a>2.1 盲图像质量评估</h3><p>在深度学习兴起之前，自然场景统计（NSS）理论主导了BIQA领域，假设完美自然图像服从一定的统计分布，不同类型的失真会打破这种统计规律。基于该理论，不同领域提出了各种手工设计的特征，包括空间、频率和梯度领域的特征。同时，一些基于学习的方法也得到了初步探索，通常使用支持向量回归来预测主观质量。</p>
-<p>近年来，各类基于深度学习的BIQA方法显著提升了在真实场景数据集上的表现。最早的研究之一是使用三层的浅层网络来解决BIQA问题。之后，研究自然扩展到通过加深网络深度或使用更有效的构建模块来增强模型的表现。近期，基于Transformer的BIQA方法逐渐增多，基于假设Transformer能够补偿卷积神经网络在捕获非局部信息方面的不足。</p>
-<p>除了精细的模型设计外，部分研究致力于解决BIQA中的主要障碍——标注数据的匮乏。一些方法尝试充分利用现有的监督信号，例如排序学习、多任务学习和混合数据集训练。同时，其他研究转向大规模预训练，生成大量失真图像。&#x3D;&#x3D;相比之下，本文提出的方法基于对比学习，无需显式的监督信号，从而充分利用了大量真实世界的图像。&#x3D;&#x3D;</p>
-<h3 id="2-2-自监督学习"><a href="#2-2-自监督学习" class="headerlink" title="2.2 自监督学习"></a>2.2 自监督学习</h3><p>SSL是一种无监督学习形式，用于为下游任务学习良好的数据表示。进行此类学习的一个简单思路是最小化模型输出与固定目标之间的差异，例如重建输入像素或预测预定义类别。受到<u>自然语言处理中的掩码语言建模</u>的成功启发，掩码图像建模在计算机视觉领域中逐渐流行。</p>
-<blockquote>
-<p>掩码语言建模（Masked Language Modeling, MLM）是一种自然语言处理（NLP）任务，常用于自监督学习。它通过让模型在不完全可见的文本上进行预测来学习词汇、语法和上下文等语言特征。MLM是BERT（Bidirectional Encoder Representations from Transformers）等模型的核心训练方式。</p>
-<p>在掩码语言建模中，给定一段文本，模型会随机选择其中一部分词语进行掩码，通常用一个特殊的“[MASK]”符号替代。例如，对于句子“我今天去上学”，模型可能会将“今天”掩码掉，即“我[MASK]去上学”。接着，模型的任务是基于上下文预测掩码词“今天”。</p>
-</blockquote>
-<p>对比学习的目标是在嵌入空间中，聚集相似样本，排斥不相似的样本。具体来说，对比学习通常涉及预训练任务和训练目标。得益于对比学习的灵活性，已提出广泛的预训练任务，例如图像上色、多视角编码和实例辨别。训练目标的主要趋势是从单一正样本和负样本扩展到多对正负样本对比。值得注意的是，上述工作都属于语义感知预训练，因为它们鼓励相同图像的不同视角具有相似的表示，忽略了图像质量的变化。&#x3D;&#x3D;本文为BIQA重新设计了一种质量感知的预训练任务。&#x3D;&#x3D;</p>
-<h3 id="2-3-图像退化建模"><a href="#2-3-图像退化建模" class="headerlink" title="2.3 图像退化建模"></a>2.3 图像退化建模</h3><p>大多数现有工作专注于几个经典的失真类型，以提取失真特定的特征。随着BIQA重要性的增加，越来越多的失真类型被开发出来并应用于合成失真图像。DipIQ总结了常见的失真操作，如噪声、模糊和压缩，并进一步细分了每种操作的五个等级。DB-CNN引入了额外的五种失真类型。最近，许多研究指出，上述方法在模拟复杂的真实图像失真方面存在局限性。&#x3D;&#x3D;本文结合图像恢复领域的多种退化手法，形成了一个更大的退化空间，以生成更贴近真实的失真图像。&#x3D;&#x3D;</p>
-<h2 id="3-方法"><a href="#3-方法" class="headerlink" title="3. 方法"></a>3. 方法</h2><p>为了解决BIQA任务中“预训练-微调”模式的潜力，我们通过在ImageNet上进行预训练来生成QPT模型。以下是具体的方法步骤：</p>
-<h3 id="3-1-自监督学习框架回顾"><a href="#3-1-自监督学习框架回顾" class="headerlink" title="3.1 自监督学习框架回顾"></a>3.1 自监督学习框架回顾</h3><p>SSL通过利用大规模数据来学习表示，从而解决BIQA缺乏大规模标注数据的障碍。SSL方法大致分为生成式和对比式。MoCo作为对比学习的一种方法，通过使用队列和滑动平均编码器构建动态字典，用于对比学习。由于图像质量受到多种复杂因素的影响，对比学习更适合BIQA任务，因为它可以轻松测量样本之间的质量排序。</p>
-<blockquote>
-<p>MoCo（Momentum Contrast for Unsupervised Visual Representation Learning）是一种无监督对比学习方法，主要用于图像特征的自监督学习。MoCo通过设计一种动态字典和基于动量的更新机制，使模型能够在大规模数据集上进行高效对比学习。MoCo在图像分类、目标检测等任务中表现良好，尤其在无监督学习中取得了重要的进展。</p>
-<p>MoCo的核心概念和实现机制如下：</p>
-<ol>
-<li><p><strong>动态字典</strong>：MoCo构建了一个动态更新的特征字典，以便模型可以在对比学习中从更大的样本池中进行选择。传统的对比学习依赖于同一个小批次的数据来构建正样本和负样本对，这会限制负样本的数量。而MoCo使用了一个大的、基于队列的字典，可以不断地存入新的样本并逐渐替换旧样本，从而提高负样本的多样性和数量。</p>
-</li>
-<li><p><strong>动量编码器</strong>：MoCo通过两个编码器来提取图像特征：查询编码器（query encoder）和键编码器（key encoder）。查询编码器直接使用主模型的参数进行更新，而键编码器的参数则通过动量更新方式，从查询编码器的参数缓慢复制过来。具体而言，键编码器的参数是通过如下动量更新公式进行更新的：<br>$$<br>\theta_k &#x3D; m \cdot \theta_k + (1 - m) \cdot \theta_q<br>$$<br>其中，$\theta_k$ 和$\theta_q$ 分别表示键编码器和查询编码器的参数，$m$ 是动量系数，通常接近于1（如0.999），以保证键编码器的更新缓慢、稳定。这种设计能够在对比学习中保持编码的一致性，减小由于模型参数快速更新带来的差异性影响。</p>
-</li>
-<li><p><strong>对比学习目标（InfoNCE损失）</strong>：MoCo的目标是将相似的样本（正样本对）在特征空间中拉近，而将不相似的样本（负样本对）推远。具体地，MoCo使用了对比损失（InfoNCE Loss），通过拉近查询样本和其正样本的距离，推远与负样本的距离。损失函数的计算公式如下：<br>$$<br>L &#x3D; - \log \frac{\exp(q \cdot k_+ &#x2F; \tau)}{\sum_{i&#x3D;0}^{N} \exp(q \cdot k_i &#x2F; \tau)}<br>$$<br>其中，$q$是查询样本的特征向量，$k_+$ 是对应的正样本向量，$k_i$ 是负样本，$\tau$ 是温度参数，用于调节对比损失的平滑程度。</p>
-</li>
-<li><p><strong>对比学习过程</strong>：在训练过程中，MoCo会不断地从输入数据中生成新的查询样本和键样本，并通过动量编码器构建更新动态字典。由于字典的大小相对于小批次数据来说要大得多，所以MoCo能够提供大量的负样本，从而提升模型的特征表示能力。</p>
-</li>
-</ol>
-<p><strong>MoCo的优势：</strong></p>
-<ul>
-<li><strong>有效利用负样本</strong>：MoCo的动态字典设计，使其能够有效地利用大量的负样本，提升了特征学习的效果。</li>
-<li><strong>保持一致性</strong>：动量更新机制保证了编码器的稳定性，减小了快速更新导致的特征不一致性问题。</li>
-<li><strong>拓展性强</strong>：MoCo易于扩展到更大的数据集或更复杂的任务中，能够在没有标注数据的情况下学习到有意义的特征表示。</li>
-</ul>
-</blockquote>
-<h3 id="3-2-退化空间"><a href="#3-2-退化空间" class="headerlink" title="3.2 退化空间"></a>3.2 退化空间</h3><p>为在自监督场景中获得可利用的质量相关信息，一种简单的方法是手动生成包含可控失真的图像对。在设计具体的失真类型之前，有几点观察需要提到：首先，感知质量受多种因素影响，如内容、失真、压缩等。其次，这些因素在实际场景中往往以复杂组合形式存在。为应对上述观察，本文从个体操作及其组合角度设计了退化空间，设计了包括&#x3D;&#x3D;几何变形、色彩变化和纹理调整&#x3D;&#x3D;的多种失真类型。通过随机选择失真类型和顺序，我们引入了打乱、跳过等操作，以进一步扩展退化空间。</p>
-<h3 id="3-3-质量感知预训练任务"><a href="#3-3-质量感知预训练任务" class="headerlink" title="3.3 质量感知预训练任务"></a>3.3 质量感知预训练任务</h3><p>不同于经典的语义感知预训练任务，本文提出了一种新的质量感知预训练任务，通过区分不同感知质量的样本来学习质量信息。每张图像经过多种失真操作生成多个视图，每个视图提取不同位置的补丁形成正样本对，而其他对则为负样本。最终，通过设计质量感知对比损失，模型能够有效学习质量相关的信息。</p>
-<blockquote>
-<p>传统的<strong>语义感知预训练任务</strong>主要关注图像的语义内容，比如物体类别或场景类型，而不关注图像的细节质量（例如清晰度、噪声、对比度等）。在语义感知任务中，模型更关注“这张图片是什么”（如猫、狗、风景），而不是“这张图片的质量如何”。然而，在图像质量评估任务中，仅依赖语义信息是不够的。图像质量评估需要模型能够检测到图像的视觉质量细节，比如是否模糊、噪声程度、压缩失真等。因此，<strong>质量感知预训练任务</strong>专注于让模型学习如何识别图像的质量差异，而不是图像的内容类别。</p>
-<ul>
-<li><strong>语义感知任务的局限性</strong>：语义感知任务仅让模型学习到物体的类别信息，而不会关注图像的视觉质量。这种预训练模式不适合需要对图像细节敏感的任务，比如盲图像质量评估（BIQA），因为图像质量的好坏和图像的语义类别无关。</li>
-<li><strong>质量感知预训练任务的核心</strong>：论文提出了一种“质量感知预训练任务”，通过区分图像的<strong>质量差异</strong>来训练模型。例如，模型会学会将高质量的图像片段和低质量的图像片段区分开，甚至能够理解同一张图像中不同失真类型或不同退化程度的差异。这使得模型可以从图像的细节中识别出质量特征，而不是简单地学习“这是猫还是狗”这样的语义信息。</li>
-</ul>
-</blockquote>
-<h2 id="4-实验"><a href="#4-实验" class="headerlink" title="4. 实验"></a>4. 实验</h2><h3 id="4-1-数据集和评价标准"><a href="#4-1-数据集和评价标准" class="headerlink" title="4.1 数据集和评价标准"></a>4.1 数据集和评价标准</h3><p>实验在五个公共BIQA数据集上进行，包括BID、CLIVE、KonIQ10K、SPAQ和FLIVE数据集。评价指标采用Pearson线性相关系数（PLCC）和Spearman等级相关系数（SRCC），分别用于衡量预测结果与主观评分的准确度和一致性。</p>
-<h3 id="4-2-实现细节"><a href="#4-2-实现细节" class="headerlink" title="4.2 实现细节"></a>4.2 实现细节</h3><p>实验使用PyTorch在8个NVIDIA V100 GPU上进行。整个实验分为预训练和微调两个阶段。在预训练阶段，我们在ImageNet数据集上使用ResNet-50模型进行训练。在微调阶段，对不同数据集的实验分别进行100到200个epoch的训练。</p>
-<h3 id="4-3-与现有最优方法的比较"><a href="#4-3-与现有最优方法的比较" class="headerlink" title="4.3 与现有最优方法的比较"></a>4.3 与现有最优方法的比较</h3><p>实验结果表明，QPT模型显著提升了当前BIQA任务的表现。与传统方法相比，QPT模型在多个数据集上取得了更高的SRCC和PLCC值，并且该模型可以无缝集成到现有最优方法中，以进一步提升性能。</p>
-<h3 id="4-4-消融研究"><a href="#4-4-消融研究" class="headerlink" title="4.4 消融研究"></a>4.4 消融研究</h3><p>通过消融实验，我们研究了数据量、编码器容量和负样本组成对QPT模型性能的影响。结果表明，数据量和编码器容量的增加均有助于提升下游任务的表现，且不同负样本组合对模型性能有显著影响。</p>
-<h3 id="4-5-与其他预训练任务的比较"><a href="#4-5-与其他预训练任务的比较" class="headerlink" title="4.5 与其他预训练任务的比较"></a>4.5 与其他预训练任务的比较</h3><p>我们进一步将QPT与其他预训练任务（包括从头训练、监督学习和MoCo）进行对比。结果显示，QPT在BIQA场景中比其他任务表现更优，特别是在线性探测和端到端微调实验中均取得了最高的表现。</p>
-<h2 id="5-结论"><a href="#5-结论" class="headerlink" title="5. 结论"></a>5. 结论</h2><p>本文提出了用于下游BIQA任务的QPT模型，通过引入多种退化类型和组合，构建了包含2 × 10⁷种可能退化的退化空间，以模拟更复杂且真实的失真图像。通过质量感知对比损失，模型可以学习质量相关的信息。实验结果表明，QPT在多个BIQA基准数据集上取得显著改进，并且可以轻松集成到现有最优方法中，表现出良好的泛化能力。</p>
-<p>了解更多：<br><a href="https://www.nxrte.com/jishu/16352.html">https://www.nxrte.com/jishu/16352.html</a></p>
-]]></content>
-      <tags>
-        <tag>图像质量评价</tag>
-        <tag>QPT</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>基于深度学习的图像处理基本知识</title>
-    <url>/2024/11/08/%E5%9F%BA%E4%BA%8E%E6%B7%B1%E5%BA%A6%E5%AD%A6%E4%B9%A0%E7%9A%84%E5%9B%BE%E5%83%8F%E5%A4%84%E7%90%86%E5%9F%BA%E6%9C%AC%E7%9F%A5%E8%AF%86/</url>
-    <content><![CDATA[<h1 id="一、须知"><a href="#一、须知" class="headerlink" title="一、须知"></a>一、须知</h1><p>参考：</p>
-<p><strong>《【深度学习】一文搞懂卷积神经网络（CNN）的原理（超详细）》</strong>：<a href="https://blog.csdn.net/AI_dataloads/article/details/133250229">https://blog.csdn.net/AI_dataloads/article/details/133250229</a></p>
+<link rel="stylesheet" href="/css/main.css">
+
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&display=swap&subset=latin,latin-ext">
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+  <link rel="stylesheet" href="/lib/pace/pace-theme-mac-osx.min.css">
+  <script src="/lib/pace/pace.min.js"></script>
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"jadengao-git.github.io","root":"/","scheme":"Mist","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":true,"show_result":false,"style":"mac"},"back2top":{"enable":true,"sidebar":false,"scrollpercent":true},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="一、须知参考： 《【深度学习】一文搞懂卷积神经网络（CNN）的原理（超详细）》：https:&#x2F;&#x2F;blog.csdn.net&#x2F;AI_dataloads&#x2F;article&#x2F;details&#x2F;133250229">
+<meta property="og:type" content="article">
+<meta property="og:title" content="基于深度学习的图像处理基本知识">
+<meta property="og:url" content="https://jadengao-git.github.io/2024/11/08/%E5%9F%BA%E4%BA%8E%E6%B7%B1%E5%BA%A6%E5%AD%A6%E4%B9%A0%E7%9A%84%E5%9B%BE%E5%83%8F%E5%A4%84%E7%90%86%E5%9F%BA%E6%9C%AC%E7%9F%A5%E8%AF%86/index.html">
+<meta property="og:site_name" content="米兰小铁匠的博客">
+<meta property="og:description" content="一、须知参考： 《【深度学习】一文搞懂卷积神经网络（CNN）的原理（超详细）》：https:&#x2F;&#x2F;blog.csdn.net&#x2F;AI_dataloads&#x2F;article&#x2F;details&#x2F;133250229">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://jadengao-git.github.io/%E5%9F%BA%E4%BA%8E%E6%B7%B1%E5%BA%A6%E5%AD%A6%E4%B9%A0%E7%9A%84%E5%9B%BE%E5%83%8F%E5%A4%84%E7%90%86%E5%9F%BA%E6%9C%AC%E7%9F%A5%E8%AF%86.assets/%E5%8D%B7%E7%A7%AF%E7%A5%9E%E7%BB%8F%E7%BD%91%E7%BB%9C%E7%9A%84%E6%9E%84%E6%88%90-9490606.png">
+<meta property="og:image" content="https://jadengao-git.github.io/2024/11/08/%E5%9F%BA%E4%BA%8E%E6%B7%B1%E5%BA%A6%E5%AD%A6%E4%B9%A0%E7%9A%84%E5%9B%BE%E5%83%8F%E5%A4%84%E7%90%86%E5%9F%BA%E6%9C%AC%E7%9F%A5%E8%AF%86/%E5%9F%BA%E4%BA%8E%E6%B7%B1%E5%BA%A6%E5%AD%A6%E4%B9%A0%E7%9A%84%E5%9B%BE%E5%83%8F%E5%A4%84%E7%90%86%E5%9F%BA%E6%9C%AC%E7%9F%A5%E8%AF%86.assets/image-20241021140903850.png">
+<meta property="og:image" content="https://jadengao-git.github.io/%E5%9F%BA%E4%BA%8E%E6%B7%B1%E5%BA%A6%E5%AD%A6%E4%B9%A0%E7%9A%84%E5%9B%BE%E5%83%8F%E5%A4%84%E7%90%86%E5%9F%BA%E6%9C%AC%E7%9F%A5%E8%AF%86.assets/6baad2f695bc40de2d64b3c212c5a514.png">
+<meta property="og:image" content="https://jadengao-git.github.io/%E5%9F%BA%E4%BA%8E%E6%B7%B1%E5%BA%A6%E5%AD%A6%E4%B9%A0%E7%9A%84%E5%9B%BE%E5%83%8F%E5%A4%84%E7%90%86%E5%9F%BA%E6%9C%AC%E7%9F%A5%E8%AF%86.assets/764cb2e00594c5b6b2597aec07d02ef3.png">
+<meta property="og:image" content="https://jadengao-git.github.io/%E5%9F%BA%E4%BA%8E%E6%B7%B1%E5%BA%A6%E5%AD%A6%E4%B9%A0%E7%9A%84%E5%9B%BE%E5%83%8F%E5%A4%84%E7%90%86%E5%9F%BA%E6%9C%AC%E7%9F%A5%E8%AF%86.assets/c33f2f3bbe91dca974d5d1f43f91cfd4.png">
+<meta property="og:image" content="https://jadengao-git.github.io/2024/11/08/%E5%9F%BA%E4%BA%8E%E6%B7%B1%E5%BA%A6%E5%AD%A6%E4%B9%A0%E7%9A%84%E5%9B%BE%E5%83%8F%E5%A4%84%E7%90%86%E5%9F%BA%E6%9C%AC%E7%9F%A5%E8%AF%86/%E5%9F%BA%E4%BA%8E%E6%B7%B1%E5%BA%A6%E5%AD%A6%E4%B9%A0%E7%9A%84%E5%9B%BE%E5%83%8F%E5%A4%84%E7%90%86%E5%9F%BA%E6%9C%AC%E7%9F%A5%E8%AF%86.assets/e06b2e09f4f2221a805e8dd373c1cfe1.jpeg">
+<meta property="og:image" content="https://jadengao-git.github.io/%E5%9F%BA%E4%BA%8E%E6%B7%B1%E5%BA%A6%E5%AD%A6%E4%B9%A0%E7%9A%84%E5%9B%BE%E5%83%8F%E5%A4%84%E7%90%86%E5%9F%BA%E6%9C%AC%E7%9F%A5%E8%AF%86.assets/image-20241024154152036-9755718.png">
+<meta property="og:image" content="https://jadengao-git.github.io/%E5%9F%BA%E4%BA%8E%E6%B7%B1%E5%BA%A6%E5%AD%A6%E4%B9%A0%E7%9A%84%E5%9B%BE%E5%83%8F%E5%A4%84%E7%90%86%E5%9F%BA%E6%9C%AC%E7%9F%A5%E8%AF%86.assets/image-20241024154451934-9755894.png">
+<meta property="article:published_time" content="2024-11-08T01:24:08.000Z">
+<meta property="article:modified_time" content="2024-11-08T01:26:52.716Z">
+<meta property="article:author" content="米兰小铁匠">
+<meta property="article:tag" content="图像质量评价">
+<meta property="article:tag" content="图像目标检测">
+<meta property="article:tag" content="CNN">
+<meta property="article:tag" content="YOLO">
+<meta property="article:tag" content="GAN">
+<meta property="article:tag" content="Transformer">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://jadengao-git.github.io/%E5%9F%BA%E4%BA%8E%E6%B7%B1%E5%BA%A6%E5%AD%A6%E4%B9%A0%E7%9A%84%E5%9B%BE%E5%83%8F%E5%A4%84%E7%90%86%E5%9F%BA%E6%9C%AC%E7%9F%A5%E8%AF%86.assets/%E5%8D%B7%E7%A7%AF%E7%A5%9E%E7%BB%8F%E7%BD%91%E7%BB%9C%E7%9A%84%E6%9E%84%E6%88%90-9490606.png">
+
+<link rel="canonical" href="https://jadengao-git.github.io/2024/11/08/%E5%9F%BA%E4%BA%8E%E6%B7%B1%E5%BA%A6%E5%AD%A6%E4%B9%A0%E7%9A%84%E5%9B%BE%E5%83%8F%E5%A4%84%E7%90%86%E5%9F%BA%E6%9C%AC%E7%9F%A5%E8%AF%86/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>基于深度学习的图像处理基本知识 | 米兰小铁匠的博客</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">米兰小铁匠的博客</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://jadengao-git.github.io/2024/11/08/%E5%9F%BA%E4%BA%8E%E6%B7%B1%E5%BA%A6%E5%AD%A6%E4%B9%A0%E7%9A%84%E5%9B%BE%E5%83%8F%E5%A4%84%E7%90%86%E5%9F%BA%E6%9C%AC%E7%9F%A5%E8%AF%86/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpg">
+      <meta itemprop="name" content="米兰小铁匠">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="米兰小铁匠的博客">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          基于深度学习的图像处理基本知识
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+              
+
+              <time title="创建时间：2024-11-08 09:24:08 / 修改时间：09:26:52" itemprop="dateCreated datePublished" datetime="2024-11-08T09:24:08+08:00">2024-11-08</time>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h1 id="一、须知"><a href="#一、须知" class="headerlink" title="一、须知"></a>一、须知</h1><p>参考：</p>
+<p><strong>《【深度学习】一文搞懂卷积神经网络（CNN）的原理（超详细）》</strong>：<a target="_blank" rel="noopener" href="https://blog.csdn.net/AI_dataloads/article/details/133250229">https://blog.csdn.net/AI_dataloads/article/details/133250229</a></p>
 <span id="more"></span>
 
 
@@ -170,7 +302,7 @@
 <h4 id="5-全连接层"><a href="#5-全连接层" class="headerlink" title="5. 全连接层"></a>5. 全连接层</h4><p>将前面层提取到的特征进行整合，进行分类或回归。全连接层将所有输入连接到输出，通常在网络的最后部分。输出通常是一个概率分布（使用softmax激活）或连续值（用于回归任务）。</p>
 <h4 id="6-输出层"><a href="#6-输出层" class="headerlink" title="6. 输出层"></a>6. 输出层</h4><p>输出最终的预测结果，比如分类标签或回归值。</p>
 <h1 id="二、图像目标检测"><a href="#二、图像目标检测" class="headerlink" title="二、图像目标检测"></a>二、图像目标检测</h1><p>参考：</p>
-<p><strong>《目标检测（Object Detection）》</strong>：<a href="https://blog.csdn.net/yegeli/article/details/109861867">https://blog.csdn.net/yegeli/article/details/109861867</a></p>
+<p><strong>《目标检测（Object Detection）》</strong>：<a target="_blank" rel="noopener" href="https://blog.csdn.net/yegeli/article/details/109861867">https://blog.csdn.net/yegeli/article/details/109861867</a></p>
 <h2 id="1-基本概念"><a href="#1-基本概念" class="headerlink" title="1. 基本概念"></a>1. 基本概念</h2><p>目标检测（Object Detection）的任务是找出图像中所有感兴趣的目标（物体），确定它们的类别和位置，是计算机视觉领域的核心问题之一。由于各类物体有不同的外观、形状和姿态，加上成像时光照、遮挡等因素的干扰，目标检测一直是计算机视觉领域最具有挑战性的问题。</p>
 <h3 id="1-核心问题"><a href="#1-核心问题" class="headerlink" title="1. 核心问题"></a>1. 核心问题</h3><ol>
 <li>分类问题：即图片（或某个区域）中的图像属于哪个类别。</li>
@@ -837,14 +969,270 @@
 <blockquote>
 <p><strong>自注意力机制（Self-Attention Mechanism）</strong> 是神经网络中的一种关键技术，最早在自然语言处理领域的 Transformer 模型中提出，后来也被广泛应用于图像处理等领域。它通过计算输入序列中每个元素与其他元素之间的关系来提取全局信息。自注意力机制能够灵活地捕捉输入数据的全局依赖关系，这与传统的局部特征提取（如卷积操作）不同，因而在处理复杂数据时具有强大的建模能力</p>
 </blockquote>
-]]></content>
-      <tags>
-        <tag>图像质量评价</tag>
-        <tag>图像目标检测</tag>
-        <tag>CNN</tag>
-        <tag>YOLO</tag>
-        <tag>GAN</tag>
-        <tag>Transformer</tag>
-      </tags>
-  </entry>
-</search>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          
+          <div class="post-tags">
+              <a href="/tags/%E5%9B%BE%E5%83%8F%E8%B4%A8%E9%87%8F%E8%AF%84%E4%BB%B7/" rel="tag"><i class="fa fa-tag"></i> 图像质量评价</a>
+              <a href="/tags/%E5%9B%BE%E5%83%8F%E7%9B%AE%E6%A0%87%E6%A3%80%E6%B5%8B/" rel="tag"><i class="fa fa-tag"></i> 图像目标检测</a>
+              <a href="/tags/CNN/" rel="tag"><i class="fa fa-tag"></i> CNN</a>
+              <a href="/tags/YOLO/" rel="tag"><i class="fa fa-tag"></i> YOLO</a>
+              <a href="/tags/GAN/" rel="tag"><i class="fa fa-tag"></i> GAN</a>
+              <a href="/tags/Transformer/" rel="tag"><i class="fa fa-tag"></i> Transformer</a>
+          </div>
+          <script type="text/javascript">
+            var tagsall=document.getElementsByClassName("post-tags")
+            for (var i = tagsall.length - 1; i >= 0; i--){
+                var tags=tagsall[i].getElementsByTagName("a");
+                for (var j = tags.length - 1; j >= 0; j--) {
+                    var golden_ratio = 0.618033988749895;
+                    var s = 0.5;
+                    var v = 0.999;
+                    var h = golden_ratio + Math.random()*0.8 - 0.5;
+                    var h_i = parseInt(h * 6);
+                    var f = h * 6 - h_i;
+                    var p = v * (1 - s);
+                    var q = v * (1 - f * s);
+                    var t = v * (1 - (1 - f) * s);
+                    var r, g, b;
+                    switch (h_i) {
+                        case 0:
+                            r = v;
+                            g = t;
+                            b = p;
+                            break;
+                        case 1:
+                            r = q;
+                            g = v;
+                            b = p;
+                            break;
+                        case 2:
+                            r = p;
+                            g = v;
+                            b = t;
+                            break;
+                        case 3 :
+                            r = p;
+                            g = q;
+                            b = v;
+                            break;
+                        case 4:
+                            r = t;
+                            g = p;
+                            b = v;
+                            break;
+                        case 5:
+                            r = v;
+                            g = p;
+                            b = q;
+                            break;
+                        default:
+                            r = 1;
+                            g = 1;
+                            b = 1;
+                      }
+                    tags[j].style.background = "rgba("+parseInt(r*255)+","+parseInt(g*255)+","+parseInt(b*255)+","+0.5+")";
+                }
+            }                        
+            </script>
+
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2024/11/07/Quality-aware%20Pre-trained%20Models%20for%20Blind%20Image%20Quality%20Assessment/" rel="prev" title="Quality-Aware Pre-Trained Models for Blind Image Quality Assessment">
+      <i class="fa fa-chevron-left"></i> Quality-Aware Pre-Trained Models for Blind Image Quality Assessment
+    </a></div>
+      <div class="post-nav-item"></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E4%B8%80%E3%80%81%E9%A1%BB%E7%9F%A5"><span class="nav-text">一、须知</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#1-%E6%B7%B1%E5%BA%A6%E5%8D%B7%E7%A7%AF%E7%A5%9E%E7%BB%8F%E7%BD%91%E7%BB%9C"><span class="nav-text">1. 深度卷积神经网络</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%EF%BC%881%EF%BC%89%E4%BB%80%E4%B9%88%E6%98%AF%E5%8D%B7%E7%A7%AF"><span class="nav-text">（1）什么是卷积</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%EF%BC%882%EF%BC%89%E5%8D%B7%E7%A7%AF%E6%A0%B8%E5%BF%83%E9%97%AE%E9%A2%98"><span class="nav-text">（2）卷积核心问题</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%EF%BC%883%EF%BC%89%E5%8D%B7%E7%A7%AF%E7%A5%9E%E7%BB%8F%E7%BD%91%E7%BB%9C%E6%A8%A1%E5%9E%8B"><span class="nav-text">（3）卷积神经网络模型</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#1-%E8%BE%93%E5%85%A5%E5%B1%82"><span class="nav-text">1. 输入层</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#2-%E5%8D%B7%E7%A7%AF%E5%B1%82"><span class="nav-text">2. 卷积层</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#3-%E6%BF%80%E6%B4%BB%E5%B1%82"><span class="nav-text">3. 激活层</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#4-%E6%B1%A0%E5%8C%96%E5%B1%82%EF%BC%88%E4%B8%8B%E9%87%87%E6%A0%B7%E5%B1%82%EF%BC%89"><span class="nav-text">4. 池化层（下采样层）</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#5-%E5%85%A8%E8%BF%9E%E6%8E%A5%E5%B1%82"><span class="nav-text">5. 全连接层</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#6-%E8%BE%93%E5%87%BA%E5%B1%82"><span class="nav-text">6. 输出层</span></a></li></ol></li></ol></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E4%BA%8C%E3%80%81%E5%9B%BE%E5%83%8F%E7%9B%AE%E6%A0%87%E6%A3%80%E6%B5%8B"><span class="nav-text">二、图像目标检测</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#1-%E5%9F%BA%E6%9C%AC%E6%A6%82%E5%BF%B5"><span class="nav-text">1. 基本概念</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-%E6%A0%B8%E5%BF%83%E9%97%AE%E9%A2%98"><span class="nav-text">1. 核心问题</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-%E7%9B%AE%E6%A0%87%E6%A3%80%E6%B5%8B%E7%AE%97%E6%B3%95%E5%88%86%E7%B1%BB"><span class="nav-text">2. 目标检测算法分类</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#Tow-Stage"><span class="nav-text">Tow Stage</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#One-Stage"><span class="nav-text">One Stage</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-%E7%9B%AE%E6%A0%87%E6%A3%80%E6%B5%8B%E5%8E%9F%E7%90%86"><span class="nav-text">2. 目标检测原理</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-%E5%80%99%E9%80%89%E5%8C%BA%E5%9F%9F%E4%BA%A7%E7%94%9F"><span class="nav-text">1. 候选区域产生</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%EF%BC%881%EF%BC%89%E6%BB%91%E5%8A%A8%E7%AA%97%E5%8F%A3"><span class="nav-text">（1）滑动窗口</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%EF%BC%882%EF%BC%89%E9%80%89%E6%8B%A9%E6%80%A7%E9%80%89%E6%8B%A9"><span class="nav-text">（2）选择性选择</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-%E6%95%B0%E6%8D%AE%E8%A1%A8%E7%A4%BA"><span class="nav-text">2. 数据表示</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#%E8%BE%93%E5%85%A5%E5%9B%BE%E5%83%8F"><span class="nav-text">输入图像</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#%E8%BE%B9%E7%95%8C%E6%A1%86%EF%BC%88Bounding-Box%EF%BC%89"><span class="nav-text">边界框（Bounding Box）</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#%E7%B1%BB%E5%88%AB%E6%A0%87%E7%AD%BE%EF%BC%88Class-Label%EF%BC%89"><span class="nav-text">类别标签（Class Label）</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#%E7%BD%91%E6%A0%BC%EF%BC%88Grid%EF%BC%89"><span class="nav-text">网格（Grid）</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#%E8%BE%93%E5%87%BA%E6%A0%BC%E5%BC%8F"><span class="nav-text">输出格式</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#%E6%95%B0%E6%8D%AE%E9%9B%86%E6%A0%BC%E5%BC%8F"><span class="nav-text">数据集格式</span></a></li></ol></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-%E6%95%88%E6%9E%9C%E8%AF%84%E4%BC%B0"><span class="nav-text">3. 效果评估</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3-%E7%9B%AE%E6%A0%87%E6%A3%80%E6%B5%8B%E6%A8%A1%E5%9E%8B"><span class="nav-text">3. 目标检测模型</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-R-CNN%E7%B3%BB%E5%88%97"><span class="nav-text">1. R-CNN系列</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%EF%BC%881%EF%BC%89R-CNN"><span class="nav-text">（1）R-CNN</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#%E8%AF%A6%E7%BB%86%E6%AD%A5%E9%AA%A4%EF%BC%9A"><span class="nav-text">详细步骤：</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#%E7%BC%BA%E7%82%B9"><span class="nav-text">缺点</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%EF%BC%882%EF%BC%89Fast-R-CNN"><span class="nav-text">（2）Fast R-CNN</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#%E8%AF%A6%E7%BB%86%E6%AD%A5%E9%AA%A4"><span class="nav-text">详细步骤</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#%E7%BC%BA%E7%82%B9-1"><span class="nav-text">缺点</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%EF%BC%883%EF%BC%89Faster-R-CNN"><span class="nav-text">（3）Faster R-CNN</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#RPN-%E7%9A%84%E5%B7%A5%E4%BD%9C%E5%8E%9F%E7%90%86%EF%BC%9A"><span class="nav-text">RPN 的工作原理：</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%EF%BC%884%EF%BC%89Mask-R-CNN"><span class="nav-text">（4）Mask R-CNN</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-YOLO%E7%B3%BB%E5%88%97"><span class="nav-text">2. YOLO系列</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%EF%BC%881%EF%BC%89YOLOv1"><span class="nav-text">（1）YOLOv1</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#%E5%9F%BA%E6%9C%AC%E6%80%9D%E6%83%B3"><span class="nav-text">基本思想</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#%E7%BD%91%E7%BB%9C%E7%BB%93%E6%9E%84"><span class="nav-text">网络结构</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#%E8%AE%AD%E7%BB%83%E8%BF%87%E7%A8%8B"><span class="nav-text">训练过程</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#%E4%BC%98%E7%BC%BA%E7%82%B9"><span class="nav-text">优缺点</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%EF%BC%882%EF%BC%89YOLOv2"><span class="nav-text">（2）YOLOv2</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#%E6%94%B9%E8%BF%9B%E7%AD%96%E7%95%A5"><span class="nav-text">改进策略</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#%E8%AE%AD%E7%BB%83%E8%BF%87%E7%A8%8B-1"><span class="nav-text">训练过程</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#%E4%BC%98%E7%82%B9%E4%B8%8E%E7%BC%BA%E7%82%B9"><span class="nav-text">优点与缺点</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%EF%BC%883%EF%BC%89YOLOv3"><span class="nav-text">（3）YOLOv3</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#%E6%94%B9%E8%BF%9B"><span class="nav-text">改进</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#%E5%A4%9A%E5%B0%BA%E5%BA%A6%E9%A2%84%E6%B5%8B"><span class="nav-text">多尺度预测</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%EF%BC%884%EF%BC%89YOLOv4"><span class="nav-text">（4）YOLOv4</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#YOLOv4%E7%9A%84%E5%88%9B%E6%96%B0%E7%82%B9"><span class="nav-text">YOLOv4的创新点</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#YOLOv4%E7%9A%84%E6%95%B4%E4%BD%93%E6%9E%B6%E6%9E%84"><span class="nav-text">YOLOv4的整体架构</span></a></li></ol></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#4-%E8%A7%86%E9%A2%91%E5%85%B3%E9%94%AE%E5%B8%A7%E5%A4%84%E7%90%86"><span class="nav-text">4. 视频关键帧处理</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#5-%E5%9B%BE%E5%83%8F%E6%A0%87%E6%B3%A8%E5%B7%A5%E5%85%B7"><span class="nav-text">5. 图像标注工具</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E4%B8%89%E3%80%81%E5%9B%BE%E5%83%8F%E8%B4%A8%E9%87%8F%E8%AF%84%E4%BB%B7"><span class="nav-text">三、图像质量评价</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#1-%E5%9F%BA%E6%9C%AC%E6%A6%82%E5%BF%B5-1"><span class="nav-text">1. 基本概念</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-%E4%B8%BB%E8%A7%82%E8%AF%84%E4%BB%B7"><span class="nav-text">1. 主观评价</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%EF%BC%881%EF%BC%89%E7%BB%9D%E5%AF%B9%E8%AF%84%E4%BB%B7"><span class="nav-text">（1）绝对评价</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%EF%BC%882%EF%BC%89%E7%9B%B8%E5%AF%B9%E8%AF%84%E4%BB%B7"><span class="nav-text">（2）相对评价</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-%E5%AE%A2%E8%A7%82%E8%AF%84%E4%BB%B7"><span class="nav-text">2. 客观评价</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-IQA%E8%AF%84%E4%BC%B0%E6%8C%87%E6%A0%87"><span class="nav-text">2. IQA评估指标</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-%E4%B8%BB%E8%A7%82%E8%AF%84%E4%BB%B7%E6%8C%87%E6%A0%87"><span class="nav-text">1. 主观评价指标</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-%E5%AE%A2%E8%A7%82%E8%AF%84%E4%BB%B7%E6%8C%87%E6%A0%87"><span class="nav-text">2. 客观评价指标</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E4%B8%8E%E6%95%B4%E4%BD%93%E5%9B%BE%E5%83%8F%E5%B7%AE%E5%BC%82%E7%9B%B8%E5%85%B3%E7%9A%84%E6%8C%87%E6%A0%87%EF%BC%9A"><span class="nav-text">与整体图像差异相关的指标：</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E4%B8%8E%E4%B8%BB%E8%A7%82%E8%A7%86%E8%A7%89%E6%84%9F%E7%9F%A5%E7%9B%B8%E5%85%B3%E7%9A%84%E6%8C%87%E6%A0%87%EF%BC%9A"><span class="nav-text">与主观视觉感知相关的指标：</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E7%9B%B8%E5%85%B3%E6%80%A7%E5%92%8C%E7%A6%BB%E5%87%BA%E7%8E%87%EF%BC%9A"><span class="nav-text">相关性和离出率：</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%B8%8D%E5%90%8C%E6%96%B9%E6%B3%95%E7%9A%84%E4%BC%98%E7%BC%BA%E7%82%B9%E6%AF%94%E8%BE%83%EF%BC%9A"><span class="nav-text">不同方法的优缺点比较：</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3-%E5%9B%BE%E5%83%8F%E8%B4%A8%E9%87%8F%E6%A3%80%E6%B5%8B%E6%96%B9%E5%BC%8F"><span class="nav-text">3. 图像质量检测方式</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-%E5%8D%8A%E5%8F%82%E8%80%83%E6%96%B9%E6%B3%95"><span class="nav-text">1. 半参考方法</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-%E7%9B%B2%E5%9B%BE%E5%83%8F%E8%B4%A8%E9%87%8F"><span class="nav-text">2. 盲图像质量</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#1-%E5%9F%BA%E4%BA%8E%E5%A4%B1%E7%9C%9F%E6%A8%A1%E5%9E%8B"><span class="nav-text">1. 基于失真模型</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#2-%E5%9F%BA%E4%BA%8E%E8%87%AA%E7%84%B6%E5%9C%BA%E6%99%AF%E7%BB%9F%E8%AE%A1"><span class="nav-text">2. 基于自然场景统计</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#3-%E5%9F%BA%E4%BA%8E%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0"><span class="nav-text">3. 基于机器学习</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#4-%E5%9F%BA%E4%BA%8E%E5%86%85%E5%AE%B9"><span class="nav-text">4. 基于内容</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-%E5%9F%BA%E4%BA%8E%E6%B7%B1%E5%BA%A6%E5%AD%A6%E4%B9%A0%E7%9A%84IQA%E6%A8%A1%E5%9E%8B"><span class="nav-text">3. 基于深度学习的IQA模型</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%EF%BC%881%EF%BC%89%E5%9F%BA%E4%BA%8E%E5%8D%B7%E7%A7%AF%E7%A5%9E%E7%BB%8F%E7%BD%91%E7%BB%9C"><span class="nav-text">（1）基于卷积神经网络</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%EF%BC%882%EF%BC%89%E5%9F%BA%E4%BA%8E%E7%94%9F%E6%88%90%E5%AF%B9%E6%8A%97%E7%BD%91%E7%BB%9C"><span class="nav-text">（2）基于生成对抗网络</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%EF%BC%883%EF%BC%89%E5%9F%BA%E4%BA%8ETransformer"><span class="nav-text">（3）基于Transformer</span></a></li></ol></li></ol></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="米兰小铁匠"
+      src="/images/avatar.jpg">
+  <p class="site-author-name" itemprop="name">米兰小铁匠</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">2</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">7</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/JadenGao-git" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;JadenGao-git" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2024</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">米兰小铁匠</span>
+</div>
+
+<!--
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://mist.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Mist</a> 强力驱动
+  </div>
+-->
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>
